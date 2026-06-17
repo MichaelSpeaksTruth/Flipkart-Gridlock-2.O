@@ -225,7 +225,10 @@ body::before {
    ============================================================ */
 .main-grid {
   display: grid;
-  grid-template-columns: 390px 260px 1fr;
+  /* Intake is widest (operator needs room to work),
+     Risk gets a generous flexible share,
+     Intel gets a fixed right column */
+  grid-template-columns: 400px 1fr 380px;
   overflow: hidden;
   height: 100%;
 }
@@ -611,7 +614,7 @@ option { background: var(--surface-2); color: var(--txt); }
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem 1.5rem 1.5rem;
+  padding: 2.25rem 2rem 1.75rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
@@ -627,7 +630,7 @@ option { background: var(--surface-2); color: var(--txt); }
 
 .gauge-svg-wrap {
   width: 100%;
-  max-width: 240px;
+  max-width: 280px;
   position: relative;
 }
 
