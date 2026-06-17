@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react';
 import { Gauge } from './components/Gauge';
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
+interface CorridorCentroid { lat: number; lon: number; }
+
 interface MetaData {
   event_cases: string[];
   corridors: string[];
   police_stations: string[];
+  corridor_centroids: Record<string, CorridorCentroid>;
+  corridor_police: Record<string, string>;
+  corridor_event_counts: Record<string, number>;
 }
 
 interface AssessResult {
@@ -45,6 +50,7 @@ const ICONS = {
   radio:  'M5.636 18.364a9 9 0 0 1 0-12.728M18.364 5.636a9 9 0 0 1 0 12.728M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',
   target: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zm0-4a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
   grid:   'M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm11 0h7v7h-7z',
+  pin:    'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0zM12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
 };
 
 /* ─── Live Clock ─────────────────────────────────────────────────────────── */
@@ -124,10 +130,47 @@ function IntelBlock({ icon, title, children }: { icon: string; title: string; ch
   );
 }
 
+/* ─── GPS Info Bar ───────────────────────────────────────────────────────── */
+function GpsInfoBar({ corridor, meta }: { corridor: string; meta: MetaData }) {
+  if (!corridor) return null;
+  const centroid = meta.corridor_centroids?.[corridor];
+  const count    = meta.corridor_event_counts?.[corridor];
+  if (!centroid) return null;
+  return (
+    <div className="gps-info-bar">
+      <Icon d={ICONS.pin} size={12} />
+      <span className="gps-info-label">GPS (auto)</span>
+      <span className="gps-info-sep">·</span>
+      <span className="gps-info-coords">{centroid.lat}, {centroid.lon}</span>
+      {count !== undefined && (
+        <>
+          <span className="gps-info-sep">—</span>
+          <span className="gps-info-note">centroid of {count.toLocaleString()} {corridor} events</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ─── Auto Info Bar ──────────────────────────────────────────────────────── */
+function AutoInfoBar({ corridor, meta }: { corridor: string; meta: MetaData }) {
+  if (!corridor) return null;
+  const ps = meta.corridor_police?.[corridor];
+  if (!ps || ps === 'No Police Station') return null;
+  return (
+    <div className="auto-info-bar">
+      <Icon d={ICONS.shield} size={12} />
+      <span className="auto-info-label">Auto-resolved</span>
+      <span className="gps-info-sep">·</span>
+      <span className="auto-info-value">{ps}</span>
+    </div>
+  );
+}
+
 const getLocalDateString = (d: Date) => {
-  const year = d.getFullYear();
+  const year  = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const day   = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
@@ -138,22 +181,23 @@ export default function App() {
   const [meta, setMeta] = useState<MetaData | null>(null);
   const [loadingMeta, setLoadingMeta] = useState(true);
 
-  // Form state
-  const [eventCase, setEventCase] = useState('');
-  const [corridor, setCorridor] = useState('');
+  // Form state — empty strings = "SELECT" placeholder shown
+  const [eventCase, setEventCase]       = useState('');
+  const [corridor, setCorridor]         = useState('');
   const [overrideMode, setOverrideMode] = useState('Auto');
   const [policeStation, setPoliceStation] = useState('');
-  const today = new Date();
+  const today    = new Date();
   const todayStr = getLocalDateString(today);
   const [date, setDate] = useState(todayStr);
   const [time, setTime] = useState(today.toTimeString().substring(0, 5));
-  const [eventType, setEventType] = useState('Unplanned');
+  const [eventType, setEventType]       = useState('Unplanned');
   const [authenticated, setAuthenticated] = useState(true);
 
   // Assessment state
   const [assessing, setAssessing] = useState(false);
-  const [stageIdx, setStageIdx] = useState(0);
-  const [result, setResult] = useState<AssessResult | null>(null);
+  const [stageIdx, setStageIdx]   = useState(0);
+  const [result, setResult]       = useState<AssessResult | null>(null);
+  const [formError, setFormError] = useState('');
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -162,9 +206,7 @@ export default function App() {
       .then(r => r.json())
       .then((d: MetaData) => {
         setMeta(d);
-        if (d.event_cases[0]) setEventCase(d.event_cases[0]);
-        if (d.corridors[0]) setCorridor(d.corridors[0]);
-        if (d.police_stations[0]) setPoliceStation(d.police_stations[0]);
+        // Do NOT pre-select — leave all dropdowns at SELECT
       })
       .catch(console.error)
       .finally(() => setLoadingMeta(false));
@@ -178,6 +220,9 @@ export default function App() {
   }, [assessing]);
 
   const handleAssess = async () => {
+    if (!eventCase) { setFormError('Please select an Event Case.'); return; }
+    if (!corridor)  { setFormError('Please select a Corridor.'); return; }
+    setFormError('');
     setAssessing(true);
     setResult(null);
     try {
@@ -211,9 +256,9 @@ export default function App() {
   const isWeekend = () => {
     const parts = date.split(/[-/]/);
     if (parts.length === 3) {
-      const year = parseInt(parts[0], 10);
+      const year  = parseInt(parts[0], 10);
       const month = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
+      const day   = parseInt(parts[2], 10);
       const d = new Date(year, month, day);
       return d.getDay() === 0 || d.getDay() === 6;
     }
@@ -221,13 +266,13 @@ export default function App() {
   };
 
   const riskColor = (label: string) => {
-    if (label === 'High') return 'var(--danger)';
+    if (label === 'High')   return 'var(--danger)';
     if (label === 'Medium') return 'var(--warning)';
     return 'var(--success)';
   };
 
   const fragColor = (score: number) => {
-    if (score >= 4) return 'var(--danger)';
+    if (score >= 4)   return 'var(--danger)';
     if (score >= 2.5) return 'var(--warning)';
     return 'var(--success)';
   };
@@ -283,45 +328,76 @@ export default function App() {
       <main className="main-grid">
 
         {/* ═══ LEFT PANEL — INCIDENT INTAKE ════════════════════════════ */}
-        <div className="panel">
+        <div className="panel panel-intake">
           <div className="panel-header">
             <span className="panel-header-label">Incident Intake Panel</span>
             <span className="panel-badge">INTAKE</span>
           </div>
           <div className="panel-body">
 
+            {/* Event Case */}
             <div className="field">
               <label className="field-label">Event Case</label>
-              <select className="field-control" value={eventCase} onChange={e => setEventCase(e.target.value)}>
-                {meta?.event_cases.map(c => <option key={c}>{c}</option>)}
+              <select
+                className={`field-control${!eventCase ? ' placeholder' : ''}`}
+                value={eventCase}
+                onChange={e => { setEventCase(e.target.value); setFormError(''); }}
+              >
+                <option value="" disabled>— Select Event Case —</option>
+                {meta?.event_cases.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
               </select>
             </div>
 
+            {/* Corridor */}
             <div className="field">
               <label className="field-label">Corridor</label>
-              <select className="field-control" value={corridor} onChange={e => setCorridor(e.target.value)}>
-                {meta?.corridors.map(c => <option key={c}>{c}</option>)}
+              <select
+                className={`field-control${!corridor ? ' placeholder' : ''}`}
+                value={corridor}
+                onChange={e => { setCorridor(e.target.value); setFormError(''); }}
+              >
+                <option value="" disabled>— Select Corridor —</option>
+                {meta?.corridors.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
               </select>
+              {/* GPS Info — shown as soon as a corridor is selected */}
+              {corridor && meta && <GpsInfoBar corridor={corridor} meta={meta} />}
             </div>
 
             <div className="field-sep" />
 
+            {/* Police Station Override */}
             <div className="field">
               <label className="field-label">Override Police Station</label>
               <SegCtrl options={['Auto', 'Manual']} value={overrideMode} onChange={setOverrideMode} />
+              {/* Auto info — show resolved police station */}
+              {overrideMode === 'Auto' && corridor && meta && (
+                <AutoInfoBar corridor={corridor} meta={meta} />
+              )}
             </div>
 
             {overrideMode === 'Manual' && (
               <div className="field">
                 <label className="field-label">Police Station</label>
-                <select className="field-control" value={policeStation} onChange={e => setPoliceStation(e.target.value)}>
-                  {meta?.police_stations.map(ps => <option key={ps}>{ps}</option>)}
+                <select
+                  className={`field-control${!policeStation ? ' placeholder' : ''}`}
+                  value={policeStation}
+                  onChange={e => setPoliceStation(e.target.value)}
+                >
+                  <option value="" disabled>— Select Police Station —</option>
+                  {meta?.police_stations.map(ps => (
+                    <option key={ps} value={ps}>{ps}</option>
+                  ))}
                 </select>
               </div>
             )}
 
             <div className="field-sep" />
 
+            {/* Date & Time */}
             <div className="field-row">
               <div className="field">
                 <label className="field-label">Date</label>
@@ -344,6 +420,7 @@ export default function App() {
               </div>
             </div>
 
+            {/* Event Type */}
             <div className="field">
               <label className="field-label">Event Type</label>
               <SegCtrl options={['Planned', 'Unplanned']} value={eventType} onChange={setEventType} />
@@ -357,7 +434,15 @@ export default function App() {
               label="Authenticate Report"
             />
 
-            <div style={{ marginTop: '1rem' }}>
+            {/* Validation error */}
+            {formError && (
+              <div className="form-error">
+                <Icon d={ICONS.alert} size={12} />
+                {formError}
+              </div>
+            )}
+
+            <div style={{ marginTop: '0.75rem' }}>
               <button
                 className={`btn-assess${assessing ? ' loading' : ''}`}
                 onClick={handleAssess}
@@ -380,7 +465,7 @@ export default function App() {
         </div>
 
         {/* ═══ CENTRE PANEL — RISK ASSESSMENT ══════════════════════════ */}
-        <div className="panel">
+        <div className="panel panel-risk">
           <div className="panel-header">
             <span className="panel-header-label">Risk Assessment</span>
             {result && (

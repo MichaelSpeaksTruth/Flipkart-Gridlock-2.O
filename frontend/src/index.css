@@ -225,7 +225,7 @@ body::before {
    ============================================================ */
 .main-grid {
   display: grid;
-  grid-template-columns: 320px 1fr 340px;
+  grid-template-columns: 390px 260px 1fr;
   overflow: hidden;
   height: 100%;
 }
@@ -325,6 +325,19 @@ select.field-control {
   cursor: pointer;
 }
 
+/* Placeholder state — dim text until a real value is chosen */
+select.field-control.placeholder {
+  color: var(--txt-2);
+}
+
+/* Dropdown option spacing for visual separation */
+select.field-control option {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
 input[type="date"].field-control,
 input[type="time"].field-control {
   appearance: revert;
@@ -346,7 +359,105 @@ input[type="time"].field-control::-webkit-calendar-picker-indicator:hover {
 option { background: var(--surface-2); color: var(--txt); }
 
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-.field-sep { height: 1px; background: var(--border); margin: 0.125rem 0; }
+.field-sep { height: 1px; background: var(--border); margin: 0.25rem 0; }
+
+/* ============================================================
+   GPS & AUTO INFO BARS
+   ============================================================ */
+.gps-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  background: rgba(94,234,212,0.06);
+  border: 1px solid rgba(94,234,212,0.16);
+  border-radius: 3px;
+  flex-wrap: wrap;
+}
+
+.gps-info-bar svg {
+  stroke: var(--accent);
+  flex-shrink: 0;
+}
+
+.gps-info-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.gps-info-sep {
+  font-size: 0.62rem;
+  color: var(--txt-3);
+  margin: 0 0.1rem;
+}
+
+.gps-info-coords {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--txt);
+  letter-spacing: 0.03em;
+}
+
+.gps-info-note {
+  font-size: 0.62rem;
+  color: var(--txt-2);
+  font-style: italic;
+}
+
+.auto-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--primary-glow);
+  border: 1px solid rgba(217,119,6,0.22);
+  border-radius: 3px;
+}
+
+.auto-info-bar svg {
+  stroke: var(--primary);
+  flex-shrink: 0;
+}
+
+.auto-info-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--primary);
+}
+
+.auto-info-value {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--txt);
+}
+
+/* ============================================================
+   FORM VALIDATION ERROR
+   ============================================================ */
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.7rem;
+  background: var(--danger-glow);
+  border: 1px solid rgba(239,68,68,0.28);
+  border-radius: 3px;
+  font-size: 0.72rem;
+  color: var(--danger);
+  margin-top: 0.25rem;
+}
+
+.form-error svg {
+  stroke: var(--danger);
+  flex-shrink: 0;
+}
 
 /* ============================================================
    SEGMENTED CONTROL

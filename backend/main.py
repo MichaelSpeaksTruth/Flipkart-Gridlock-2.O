@@ -75,17 +75,35 @@ def health_check():
 def get_meta():
     named_corridors = sorted([c for c in META["cat_maps"]["corridor"] if c != "Non-corridor"])
     corridors = named_corridors + ["Non-corridor"]
-    
+
     # Only return causes that have a label defined in our UI mapping
     causes = [CAUSE_LABEL.get(c, c) for c in META["cat_maps"]["event_cause"]]
     causes = sorted(list(set(causes)))
-    
+
     police_stations = sorted(META["cat_maps"]["police_station"])
-    
+
+    # Build corridor GPS centroid map for frontend display
+    centroid_map: dict = {}
+    for corr, row in CORRIDOR_CENT.iterrows():
+        centroid_map[str(corr)] = {
+            "lat": round(float(row["mean_lat"]), 4),
+            "lon": round(float(row["mean_lon"]), 4),
+        }
+
+    # Build corridor -> auto police station map for frontend display
+    police_map: dict = {str(corr): str(ps) for corr, ps in CORRIDOR_POLICE.items()}
+
+    # Build corridor -> event count map from centroids CSV (reread with count column)
+    cent_full = pd.read_csv(os.path.join(ARTIFACT_DIR, "corridor_centroids.csv")).set_index("corridor")
+    count_map: dict = {str(c): int(r["count"]) for c, r in cent_full.iterrows()}
+
     return {
         "event_cases": causes,
         "corridors": corridors,
-        "police_stations": police_stations
+        "police_stations": police_stations,
+        "corridor_centroids": centroid_map,
+        "corridor_police": police_map,
+        "corridor_event_counts": count_map,
     }
 
 @app.post("/api/assess")
