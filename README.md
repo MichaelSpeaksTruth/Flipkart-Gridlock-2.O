@@ -2,6 +2,8 @@
 
 Corridor Watch is a production-quality, professional decision-support and traffic command dashboard designed for the Bengaluru Traffic Command. The system automates incident triage by assessing the probability of road closure, estimating median clearance times, evaluating corridor vulnerability metrics, and suggesting optimal diversion strategies for traffic controllers.
 
+![Corridor Watch - Dataset & Model at a Glance](ref/10_dataset_stats_card.png)
+
 ---
 
 ## 1. System Architecture
@@ -53,9 +55,9 @@ graph TD
 
 #### Frontend Single-Page Application (SPA)
 The frontend is a lightweight Single-Page Application built with React, TypeScript, and Vite. All styles are declared in vanilla CSS, implementing a dark operations-center theme utilizing amber as the primary command color.
-- **Incident Intake Panel (Left Column)**: Collects operational incident parameters, including incident category, targeted traffic corridor, police jurisdiction overrides, incident scheduling, classification, and report authentication tags.
-- **Risk Assessment Panel (Center Column)**: Renders a custom SVG semicircular gauge visualizing closure probability, paired with contextual information tags and structural fragility scores.
-- **Operational Intelligence Panel (Right Column)**: Displays action items, recommended diversion routes, and an auto-generated summary report.
+- **Incident Intake Panel (Left Column)**: Collects operational incident parameters (incident category, corridor, police jurisdiction, time parameters, report authentication). Features smart, sequential auto-scrolling to guide operators through input fields. Pins validation warnings at the bottom. Once assessed, the form freezes to show an immutable summary, and presents an "Assess New Risk" action to reset the state.
+- **Risk Assessment Panel (Center Column)**: Renders a custom SVG semicircular gauge visualizing closure probability, paired with contextual information tags and structural fragility scores. Contains dynamic scroll indicators (blinking down-arrow) if content overflows.
+- **Operational Intelligence Panel (Right Column)**: Displays action items, recommended diversion routes, and an auto-generated summary report. Includes dynamic scroll indicators if content overflows.
 
 #### Backend REST API (FastAPI)
 The backend is a python-based REST API built with FastAPI. It handles routing, requests verification, coordinates resolution, and delegates tasks to the machine learning inference pipeline.
@@ -109,7 +111,79 @@ flowchart TD
 
 ---
 
-## 3. Technical Stack
+## 3. Exploratory Data Analysis & Operational Insights
+
+Before modeling, the training dataset of **8,173 traffic incidents** was thoroughly analyzed to identify underlying temporal and spatial patterns.
+
+### Temporal Closure Hazards
+Analyses of closure rates by hour revealed that peak road closure risks occur during mid-day (**10:00 - 17:00**), peaking at **40.7%** around noon. Interestingly, the evening rush hour (**19:00 - 22:00**), while having high traffic volume, presents a significantly lower rate of complete road closure (5% to 7%).
+
+![Road Closure Rate by Hour](ref/01_hourly_closure_rate.png)
+
+Cross-referencing the cause of the incident with the hour of the day highlights specific high-risk windows. For example, construction projects and tree falls exhibit elevated closure probabilities during specific intervals, which our model exploits.
+
+![Closure Rate Heatmap by Cause & Hour](ref/05_cause_hour_heatmap.png)
+
+### Corridor Fragility Index
+We formulated a dynamic **Corridor Fragility Index (out of 10)** to represent how susceptible a corridor is to gridlock. The index weights event frequency, historical closure rate, and resolution times:
+
+$$\text{Fragility Score} = 0.4 \times \text{Event Count} + 0.4 \times \text{Closure Rate} + 0.2 \times \text{Average Resolution Time}$$
+
+Based on this score, named corridors are classified into High, Medium, and Lower fragility. When an incident occurs on a high-fragility corridor, the dashboard automatically recommends a diversion route using the lowest-fragility corridor within the same traffic zone.
+
+![Corridor Fragility Index Chart](ref/02_corridor_fragility.png)
+
+### Resolution Time (ETA) Estimation
+For estimating median clearance times (ETA), a machine learning regressor was trained but ultimately dropped in favor of a historical lookup table. The LightGBM regressor achieved an OOF Mean Absolute Error (MAE) of 28.8 minutes, which did not provide a statistically meaningful lift over the historical lookup baseline of 29.5 minutes. The lookup table was selected for its transparency, simplicity, and low computational overhead.
+
+![Historical Median ETA by Cause](ref/04_eta_by_cause.png)
+
+---
+
+## 4. Machine Learning Pipeline & Model Training
+
+### Feature Selection & Engineering
+We evaluated 46 raw features from the traffic logs. To avoid overfitting and optimize performance, we filtered these down to 12 high-signal features across geographical, temporal, and metadata categories.
+
+![Feature Selection Matrix](ref/08_feature_selection_table.png)
+
+Our LightGBM model ensemble relies heavily on geographic coordinates (Latitude and Longitude) and the event cause. Together, these top features drive **58%** of the model's prediction signal.
+
+![LightGBM Feature Importances](ref/03_feature_importance.png)
+
+### Model Evaluation & Cross-Validation
+To guarantee generalization across different timeframes and locations in Bengaluru, we utilized a **5-Fold Stratified Cross-Validation** strategy. The ensemble achieves a robust Out-Of-Fold (OOF) Area Under the ROC Curve (AUC) of **0.8057**, indicating highly stable predictions across folds.
+
+![5-Fold CV AUC Chart](ref/06_fold_auc.png)
+
+For deployment testing, a **20-case self-demo matrix** was run to verify in-sample operational accuracy. The system achieved a **95% accuracy rate (19/20 correct)**, with 0 false alarms and only a single missed closure (a vehicle breakdown at midnight, which is historically a lower-hazard hour).
+
+![Self-Demo Confusion Matrix](ref/07_self_demo_matrix.png)
+
+### Data Quality Finding: Priority Column Leakage
+A critical finding during data exploration was that the `priority` column represents administrative routing rules (whether the incident occurred on a named corridor) rather than actual hazard severity. Including it as a model target or feature resulted in a near-perfect OOF AUC of **0.9998**, a classic indicator of target leakage. To preserve model integrity, the `priority` feature was dropped.
+
+![Priority Leakage Analysis](ref/09_priority_leakage.png)
+
+---
+
+## 5. Rigour Over Results: Things We Tried and Rejected
+
+We prioritized scientific rigour and operational safety over "inflated" model metrics. Multiple modelling approaches were experimented with and systematically rejected based on validation performance.
+
+![Things We Tried and Rejected Chart](ref/12_what_we_rejected.png)
+
+---
+
+## 6. Reviewer FAQ & Technical Rebuttals
+
+Anticipating tough questions from system reviewers, we have documented our design decisions and justifications below:
+
+![Reviewer Rebuttals Card](ref/11_judge_challenges.png)
+
+---
+
+## 7. Technical Stack
 
 - **Frontend**:
   - Framework: React 18 with TypeScript
@@ -127,7 +201,7 @@ flowchart TD
 
 ---
 
-## 4. Local Development Setup
+## 8. Local Development Setup
 
 ### Directory Structure
 
@@ -197,7 +271,7 @@ flowchart TD
 
 ---
 
-## 5. Production Deployment
+## 9. Production Deployment
 
 ### Backend Deployment (Render)
 1. Commit and push the project changes to a GitHub repository.
@@ -221,10 +295,9 @@ flowchart TD
 
 ---
 
-## 6. Credits
+## 10. Credits
 
 ### Hackathon Team Members
 - Anurag Kumar Verma
 - Shreyanshu Ghosh
 - Abhishek Kumar
-
