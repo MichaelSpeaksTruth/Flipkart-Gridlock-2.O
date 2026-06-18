@@ -276,8 +276,26 @@ export default function App() {
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-  // Intake panel ref (needed so RevealOnMount children can scroll inside it)
-  const intakeBodyRef = useRef<HTMLDivElement>(null);
+  // Intake panel field refs for smart sequential scroll
+  const intakeBodyRef   = useRef<HTMLDivElement>(null);
+  const refCorridor     = useRef<HTMLDivElement>(null);
+  const refOverride     = useRef<HTMLDivElement>(null);
+  const refManualPS     = useRef<HTMLDivElement>(null);
+  const refDateTime     = useRef<HTMLDivElement>(null);
+  const refEventType    = useRef<HTMLDivElement>(null);
+
+  // Smooth sequential scroll: when a field is filled, reveal the next
+  const scrollTo = (ref: React.RefObject<HTMLDivElement | null>) => {
+    setTimeout(() => {
+      ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 80);
+  };
+
+  useEffect(() => { if (eventCase)      scrollTo(refCorridor);  }, [eventCase]);
+  useEffect(() => { if (corridor)       scrollTo(refOverride);  }, [corridor]);
+  useEffect(() => { if (overrideMode === 'Manual') scrollTo(refManualPS); }, [overrideMode]);
+  useEffect(() => { if (policeStation || overrideMode === 'Auto') scrollTo(refDateTime); }, [policeStation, overrideMode]);
+  useEffect(() => { if (date || time)   scrollTo(refEventType); }, [date, time]);
 
   useEffect(() => {
     fetch(`${API_URL}/api/meta`)
@@ -413,7 +431,9 @@ export default function App() {
             <span className="panel-header-label">Incident Intake Panel</span>
             <span className="panel-badge">INTAKE</span>
           </div>
-          <div className="panel-body intake-scroll-body" ref={intakeBodyRef}>
+
+          {/* ── Scrollable fields area ────────────────────────────── */}
+          <div className="intake-fields" ref={intakeBodyRef}>
 
             {/* Event Case */}
             <div className="field">
@@ -431,7 +451,7 @@ export default function App() {
             </div>
 
             {/* Corridor */}
-            <div className="field">
+            <div className="field" ref={refCorridor}>
               <label className="field-label">Corridor</label>
               <select
                 className={`field-control${!corridor ? ' placeholder' : ''}`}
@@ -443,7 +463,6 @@ export default function App() {
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
-              {/* GPS Info — shown as soon as a corridor is selected */}
               {corridor && meta && (
                 <RevealOnMount>
                   <GpsInfoBar corridor={corridor} meta={meta} />
@@ -454,10 +473,9 @@ export default function App() {
             <div className="field-sep" />
 
             {/* Police Station Override */}
-            <div className="field">
+            <div className="field" ref={refOverride}>
               <label className="field-label">Override Police Station</label>
               <SegCtrl options={['Auto', 'Manual']} value={overrideMode} onChange={setOverrideMode} />
-              {/* Auto info — show resolved police station */}
               {overrideMode === 'Auto' && corridor && meta && (
                 <RevealOnMount>
                   <AutoInfoBar corridor={corridor} meta={meta} />
@@ -467,7 +485,7 @@ export default function App() {
 
             {overrideMode === 'Manual' && (
               <RevealOnMount>
-                <div className="field">
+                <div className="field" ref={refManualPS}>
                   <label className="field-label">Police Station</label>
                   <select
                     className={`field-control${!policeStation ? ' placeholder' : ''}`}
@@ -486,7 +504,7 @@ export default function App() {
             <div className="field-sep" />
 
             {/* Date & Time */}
-            <div className="field-row">
+            <div className="field-row" ref={refDateTime}>
               <div className="field">
                 <label className="field-label">Date</label>
                 <input
@@ -509,18 +527,10 @@ export default function App() {
             </div>
 
             {/* Event Type */}
-            <div className="field">
+            <div className="field" ref={refEventType}>
               <label className="field-label">Event Type</label>
               <SegCtrl options={['Planned', 'Unplanned']} value={eventType} onChange={setEventType} />
             </div>
-
-            <div className="field-sep" />
-
-            <Toggle
-              checked={authenticated}
-              onChange={setAuthenticated}
-              label="Authenticate Report"
-            />
 
             {/* Validation error */}
             {formError && (
@@ -530,25 +540,34 @@ export default function App() {
               </div>
             )}
 
-            <div style={{ marginTop: '0.75rem' }}>
-              <button
-                className={`btn-assess${assessing ? ' loading' : ''}`}
-                onClick={handleAssess}
-                disabled={assessing}
-              >
-                {assessing ? (
-                  <>
-                    <div className="spinner dark" />
-                    {STAGES[stageIdx]}
-                  </>
-                ) : (
-                  <>
-                    <Icon d={ICONS.target} size={15} />
-                    Assess Risk
-                  </>
-                )}
-              </button>
-            </div>
+            {/* Spacer so last field isn't glued to the footer */}
+            <div style={{ height: '0.5rem' }} />
+          </div>
+
+          {/* ── Sticky footer: separator + toggle + button ────────── */}
+          <div className="intake-footer">
+            <Toggle
+              checked={authenticated}
+              onChange={setAuthenticated}
+              label="Authenticate Report"
+            />
+            <button
+              className={`btn-assess${assessing ? ' loading' : ''}`}
+              onClick={handleAssess}
+              disabled={assessing}
+            >
+              {assessing ? (
+                <>
+                  <div className="spinner dark" />
+                  {STAGES[stageIdx]}
+                </>
+              ) : (
+                <>
+                  <Icon d={ICONS.target} size={15} />
+                  Assess Risk
+                </>
+              )}
+            </button>
           </div>
         </div>
 

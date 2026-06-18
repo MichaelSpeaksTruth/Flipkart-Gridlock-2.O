@@ -288,10 +288,30 @@ body::before {
   flex: 1;
 }
 
-/* Intake panel body — always scrolls to bottom as form grows */
-.intake-scroll-body {
+/* Intake panel: scrollable form fields area */
+.intake-fields {
+  flex: 1;
   overflow-y: auto;
   scroll-behavior: smooth;
+  min-height: 0;
+  padding: 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+.intake-fields::-webkit-scrollbar { width: 3px; }
+.intake-fields::-webkit-scrollbar-track { background: transparent; }
+.intake-fields::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Intake panel: sticky bottom strip — toggle + button */
+.intake-footer {
+  flex-shrink: 0;
+  padding: 1rem 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--surface);
 }
 
 /* ============================================================
@@ -982,10 +1002,14 @@ option { background: var(--surface-2); color: var(--txt); }
   .scroll-arrow-indicator {
     display: none;
   }
-  /* Intake scroll body: cap height so it doesn't fill entire screen */
-  .intake-scroll-body {
-    max-height: none;
+  /* Intake fields: revert to normal flow on mobile (panel expands freely) */
+  .intake-fields {
     overflow: visible;
+    min-height: unset;
+  }
+  /* Footer stacks naturally below fields on mobile */
+  .intake-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
   }
 }
 
@@ -1022,16 +1046,5 @@ option { background: var(--surface-2); color: var(--txt); }
   }
 }
 
-/* ── Desktop: intake panel uses a fixed height + scrolls within panel */
-@media (min-width: 1101px) {
-  .panel-intake {
-    overflow: hidden;
-  }
-  .intake-scroll-body {
-    flex: 1;
-    overflow-y: auto;
-    scroll-behavior: smooth;
-    min-height: 0;
-  }
-}
+
 
