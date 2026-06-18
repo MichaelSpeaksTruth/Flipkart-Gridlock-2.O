@@ -6,6 +6,13 @@ Corridor Watch is a production-quality, professional decision-support and traffi
 
 ---
 
+### Deployed Environments
+* **Frontend Web Application (Vercel):** [https://flipkart-gridlock-2-o.vercel.app/](https://flipkart-gridlock-2-o.vercel.app/)
+* **Backend API Swagger Documentation (Render):** [https://flipkart-gridlock-2-o-3.onrender.com/docs](https://flipkart-gridlock-2-o-3.onrender.com/docs)
+* **Backend Live Health Check Endpoint:** [https://flipkart-gridlock-2-o-3.onrender.com/health](https://flipkart-gridlock-2-o-3.onrender.com/health)
+
+---
+
 ## 1. System Architecture
 
 The application is structured as a decoupled client-server architecture. The backend service encapsulates the core machine learning inference pipeline and serves pre-computed topological data, while the frontend single-page application displays the real-time operational status.
