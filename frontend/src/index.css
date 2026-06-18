@@ -905,7 +905,7 @@ option { background: var(--surface-2); color: var(--txt); }
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
+  cursor: pointer;
   animation: scroll-arrow-blink 1.4s ease-in-out infinite;
   z-index: 20;
 }

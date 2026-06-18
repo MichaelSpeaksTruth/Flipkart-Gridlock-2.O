@@ -108,7 +108,7 @@ function Tag({ children, variant }: { children: React.ReactNode; variant: 'succe
 
 /* ─── ScrollPanel ────────────────────────────────────────────────────────── */
 // Wraps a scrollable panel body; shows a blinking down-arrow circle only when
-// there is hidden content below the visible area.
+// there is hidden content below the visible area. Clicking the arrow scrolls down.
 function ScrollPanel({ children, className }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [showArrow, setShowArrow] = useState(false);
@@ -136,13 +136,25 @@ function ScrollPanel({ children, className }: { children: React.ReactNode; class
   // Re-check whenever children change (new result loaded)
   useEffect(() => { checkOverflow(); });
 
+  const handleArrowClick = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollBy({ top: Math.ceil(el.clientHeight * 0.6), behavior: 'smooth' });
+  };
+
   return (
     <div className={`scroll-panel-wrapper${className ? ' ' + className : ''}`}>
       <div className="scroll-panel-body" ref={ref}>
         {children}
       </div>
       {showArrow && (
-        <div className="scroll-arrow-indicator">
+        <div
+          className="scroll-arrow-indicator"
+          onClick={handleArrowClick}
+          role="button"
+          aria-label="Scroll down"
+          style={{ cursor: 'pointer', pointerEvents: 'all' }}
+        >
           <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -246,6 +258,14 @@ export default function App() {
   const [formError, setFormError] = useState('');
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+  // Intake panel auto-scroll — scroll to bottom whenever form state changes
+  const intakeBodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = intakeBodyRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }, [eventCase, corridor, overrideMode, policeStation, formError]);
 
   useEffect(() => {
     fetch(`${API_URL}/api/meta`)
@@ -379,7 +399,7 @@ export default function App() {
             <span className="panel-header-label">Incident Intake Panel</span>
             <span className="panel-badge">INTAKE</span>
           </div>
-          <div className="panel-body intake-scroll-body">
+          <div className="panel-body intake-scroll-body" ref={intakeBodyRef}>
 
             {/* Event Case */}
             <div className="field">
