@@ -272,7 +272,7 @@ export default function App() {
   const [assessing, setAssessing] = useState(false);
   const [stageIdx, setStageIdx]   = useState(0);
   const [result, setResult]       = useState<AssessResult | null>(null);
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState<string[]>([]); // collects ALL missing field messages
   const [frozen, setFrozen]       = useState(false); // locks panel after result
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -317,9 +317,11 @@ export default function App() {
   }, [assessing]);
 
   const handleAssess = async () => {
-    if (!eventCase) { setFormError('Please select an Event Case.'); return; }
-    if (!corridor)  { setFormError('Please select a Corridor.'); return; }
-    setFormError('');
+    const errors: string[] = [];
+    if (!eventCase) errors.push('Please select an Event Case.');
+    if (!corridor)  errors.push('Please select a Corridor.');
+    if (errors.length) { setFormError(errors); return; }
+    setFormError([]);
     setAssessing(true);
     setResult(null);
     try {
@@ -359,7 +361,7 @@ export default function App() {
     setEventType('Unplanned');
     setAuthenticated(true);
     setResult(null);
-    setFormError('');
+    setFormError([]);
     setFrozen(false);
   };
 
@@ -527,7 +529,7 @@ export default function App() {
                   <select
                     className={`field-control${!eventCase ? ' placeholder' : ''}`}
                     value={eventCase}
-                    onChange={e => { setEventCase(e.target.value); setFormError(''); }}
+                    onChange={e => { setEventCase(e.target.value); setFormError([]); }}
                   >
                     <option value="" disabled>— Select Event Case —</option>
                     {meta?.event_cases.map(c => (
@@ -542,7 +544,7 @@ export default function App() {
                   <select
                     className={`field-control${!corridor ? ' placeholder' : ''}`}
                     value={corridor}
-                    onChange={e => { setCorridor(e.target.value); setFormError(''); }}
+                    onChange={e => { setCorridor(e.target.value); setFormError([]); }}
                   >
                     <option value="" disabled>— Select Corridor —</option>
                     {meta?.corridors.map(c => (
@@ -618,11 +620,15 @@ export default function App() {
                   <SegCtrl options={['Planned', 'Unplanned']} value={eventType} onChange={setEventType} />
                 </div>
 
-                {/* Validation error */}
-                {formError && (
-                  <div className="form-error">
-                    <Icon d={ICONS.alert} size={12} />
-                    {formError}
+                {/* Validation errors */}
+                {formError.length > 0 && (
+                  <div className="form-error-block">
+                    {formError.map((msg, i) => (
+                      <div key={i} className="form-error-line">
+                        <Icon d={ICONS.alert} size={11} />
+                        {msg}
+                      </div>
+                    ))}
                   </div>
                 )}
 

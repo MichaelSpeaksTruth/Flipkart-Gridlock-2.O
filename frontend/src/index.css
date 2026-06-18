@@ -584,20 +584,28 @@ option { background: var(--surface-2); color: var(--txt); }
 /* ============================================================
    FORM VALIDATION ERROR
    ============================================================ */
-.form-error {
+/* Error block — stacks one line per missing field */
+.form-error-block {
   display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0.7rem;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.5rem 0.7rem;
   background: var(--danger-glow);
   border: 1px solid rgba(239,68,68,0.28);
   border-radius: 3px;
-  font-size: 0.72rem;
-  color: var(--danger);
   margin-top: 0.25rem;
 }
 
-.form-error svg {
+.form-error-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.form-error-line svg {
   stroke: var(--danger);
   flex-shrink: 0;
 }
