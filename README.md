@@ -282,7 +282,7 @@ We prioritized scientific rigour and operational safety over "inflated" model me
 2. Select **Vite** as the framework preset.
 3. Set the **Root Directory** to `frontend`.
 4. Add the following environment variable in the dashboard configurations:
-   - `VITE_API_URL`: Set this value to the live HTTPS URL of the deployed Render backend (e.g., `https://gridlock-api.onrender.com`).
+   - `VITE_API_URL`: Set this value to the live HTTPS URL of the deployed Render backend (e.g., `https://flipkart-gridlock-2-o-3.onrender.com`).
 5. Click **Deploy**.
 
 ---
@@ -308,7 +308,7 @@ UptimeRobot Scheduler
       │
       │  HTTP GET /health  (every 10 minutes)
       ▼
-Render Backend (https://gridlock-api.onrender.com/health)
+Render Backend (https://flipkart-gridlock-2-o-3.onrender.com/health)
       │
       │  200 OK  {"status": "ok"}
       ▼
@@ -320,7 +320,7 @@ UptimeRobot records uptime ✓
 | Parameter | Value |
 |---|---|
 | Monitor Type | HTTP(s) |
-| URL | `https://gridlock-api.onrender.com/health` |
+| URL | `https://flipkart-gridlock-2-o-3.onrender.com/health` |
 | Check Interval | Every **10 minutes** |
 | Alert Contact | **Anurag Kumar Verma** (email) |
 | Alert Trigger | Service down for ≥ 1 failed check |
