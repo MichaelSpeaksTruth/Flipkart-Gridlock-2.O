@@ -164,6 +164,23 @@ function ScrollPanel({ children, className }: { children: React.ReactNode; class
   );
 }
 
+/* ─── RevealOnMount ────────────────────────────────────────────────────── */
+// When a conditional element first mounts, scroll it into view just enough
+// to be visible — never more. Perfect for intake panel progressive reveal.
+function RevealOnMount({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // Tiny delay so the DOM has fully painted before we check
+    const id = setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
+    return () => clearTimeout(id);
+  }, []);
+  return <div ref={ref}>{children}</div>;
+}
+
 /* ─── Metric Tile ────────────────────────────────────────────────────────── */
 function MetricTile({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
@@ -259,13 +276,8 @@ export default function App() {
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-  // Intake panel auto-scroll — scroll to bottom whenever form state changes
+  // Intake panel ref (needed so RevealOnMount children can scroll inside it)
   const intakeBodyRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = intakeBodyRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-  }, [eventCase, corridor, overrideMode, policeStation, formError]);
 
   useEffect(() => {
     fetch(`${API_URL}/api/meta`)
@@ -371,16 +383,18 @@ export default function App() {
         </div>
 
         <div className="topbar-meta">
-          <div className="topbar-stat">
-            <div className="topbar-stat-value">8,173</div>
-            <div className="topbar-stat-label">Events Analysed</div>
+          <div className="topbar-stats-group">
+            <div className="topbar-stat">
+              <div className="topbar-stat-value">8,173</div>
+              <div className="topbar-stat-label">Events Analysed</div>
+            </div>
+            <div className="topbar-divider" />
+            <div className="topbar-stat">
+              <div className="topbar-stat-value">0.8057</div>
+              <div className="topbar-stat-label">Model AUC</div>
+            </div>
+            <div className="topbar-divider" />
           </div>
-          <div className="topbar-divider" />
-          <div className="topbar-stat">
-            <div className="topbar-stat-value">0.8057</div>
-            <div className="topbar-stat-label">Model AUC</div>
-          </div>
-          <div className="topbar-divider" />
           <LiveClock />
           <div className="topbar-divider" />
           <div className="status-row">
@@ -430,7 +444,11 @@ export default function App() {
                 ))}
               </select>
               {/* GPS Info — shown as soon as a corridor is selected */}
-              {corridor && meta && <GpsInfoBar corridor={corridor} meta={meta} />}
+              {corridor && meta && (
+                <RevealOnMount>
+                  <GpsInfoBar corridor={corridor} meta={meta} />
+                </RevealOnMount>
+              )}
             </div>
 
             <div className="field-sep" />
@@ -441,24 +459,28 @@ export default function App() {
               <SegCtrl options={['Auto', 'Manual']} value={overrideMode} onChange={setOverrideMode} />
               {/* Auto info — show resolved police station */}
               {overrideMode === 'Auto' && corridor && meta && (
-                <AutoInfoBar corridor={corridor} meta={meta} />
+                <RevealOnMount>
+                  <AutoInfoBar corridor={corridor} meta={meta} />
+                </RevealOnMount>
               )}
             </div>
 
             {overrideMode === 'Manual' && (
-              <div className="field">
-                <label className="field-label">Police Station</label>
-                <select
-                  className={`field-control${!policeStation ? ' placeholder' : ''}`}
-                  value={policeStation}
-                  onChange={e => setPoliceStation(e.target.value)}
-                >
-                  <option value="" disabled>— Select Police Station —</option>
-                  {meta?.police_stations.map(ps => (
-                    <option key={ps} value={ps}>{ps}</option>
-                  ))}
-                </select>
-              </div>
+              <RevealOnMount>
+                <div className="field">
+                  <label className="field-label">Police Station</label>
+                  <select
+                    className={`field-control${!policeStation ? ' placeholder' : ''}`}
+                    value={policeStation}
+                    onChange={e => setPoliceStation(e.target.value)}
+                  >
+                    <option value="" disabled>— Select Police Station —</option>
+                    {meta?.police_stations.map(ps => (
+                      <option key={ps} value={ps}>{ps}</option>
+                    ))}
+                  </select>
+                </div>
+              </RevealOnMount>
             )}
 
             <div className="field-sep" />

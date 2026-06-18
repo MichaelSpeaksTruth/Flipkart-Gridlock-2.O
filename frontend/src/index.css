@@ -931,7 +931,34 @@ option { background: var(--surface-2); color: var(--txt); }
 /* ============================================================
    RESPONSIVE
    ============================================================ */
+
+/* ── Topbar stats group: hide on medium screens */
+.topbar-stats-group {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* ── ≤ 900px: hide stat tiles, keep clock + online */
+@media (max-width: 900px) {
+  .topbar-stats-group {
+    display: none;
+  }
+  .topbar-meta {
+    gap: 0.75rem;
+  }
+  .topbar {
+    padding: 0 1rem;
+  }
+}
+
+/* ── ≤ 1100px: panels stack vertically */
 @media (max-width: 1100px) {
+  .app {
+    grid-template-rows: auto 1fr;
+    height: auto;
+    min-height: 100vh;
+  }
   .main-grid {
     grid-template-columns: 1fr;
     height: auto;
@@ -941,5 +968,70 @@ option { background: var(--surface-2); color: var(--txt); }
     border-right: none;
     border-bottom: 1px solid var(--border);
     overflow: visible;
+    min-height: 300px;
+  }
+  /* On mobile panels stack, so scroll-panel acts as normal flow */
+  .scroll-panel-wrapper {
+    overflow: visible;
+    flex: unset;
+  }
+  .scroll-panel-body {
+    overflow: visible;
+  }
+  /* Arrow not needed when panels are full height on mobile */
+  .scroll-arrow-indicator {
+    display: none;
+  }
+  /* Intake scroll body: cap height so it doesn't fill entire screen */
+  .intake-scroll-body {
+    max-height: none;
+    overflow: visible;
   }
 }
+
+/* ── ≤ 600px: very compact topbar */
+@media (max-width: 600px) {
+  .topbar {
+    padding: 0 0.75rem;
+    height: 52px;
+  }
+  .topbar-title {
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+  }
+  .topbar-subtitle {
+    display: none;
+  }
+  .topbar-brand-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .topbar-brand-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+  .live-clock {
+    font-size: 0.68rem;
+  }
+  .status-text {
+    font-size: 0.6rem;
+  }
+  /* Hide last divider before online too */
+  .topbar-meta > .topbar-divider:last-of-type {
+    display: none;
+  }
+}
+
+/* ── Desktop: intake panel uses a fixed height + scrolls within panel */
+@media (min-width: 1101px) {
+  .panel-intake {
+    overflow: hidden;
+  }
+  .intake-scroll-body {
+    flex: 1;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    min-height: 0;
+  }
+}
+
