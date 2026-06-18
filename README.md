@@ -175,15 +175,7 @@ We prioritized scientific rigour and operational safety over "inflated" model me
 
 ---
 
-## 6. Reviewer FAQ & Technical Rebuttals
-
-Anticipating tough questions from system reviewers, we have documented our design decisions and justifications below:
-
-![Reviewer Rebuttals Card](ref/11_judge_challenges.png)
-
----
-
-## 7. Technical Stack
+## 6. Technical Stack
 
 - **Frontend**:
   - Framework: React 18 with TypeScript
@@ -201,7 +193,7 @@ Anticipating tough questions from system reviewers, we have documented our desig
 
 ---
 
-## 8. Local Development Setup
+## 7. Local Development Setup
 
 ### Directory Structure
 
@@ -271,7 +263,7 @@ Anticipating tough questions from system reviewers, we have documented our desig
 
 ---
 
-## 9. Production Deployment
+## 8. Production Deployment
 
 ### Backend Deployment (Render)
 1. Commit and push the project changes to a GitHub repository.
@@ -295,7 +287,7 @@ Anticipating tough questions from system reviewers, we have documented our desig
 
 ---
 
-## 10. Credits
+## 9. Credits
 
 ### Hackathon Team Members
 - Anurag Kumar Verma
