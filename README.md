@@ -287,7 +287,107 @@ We prioritized scientific rigour and operational safety over "inflated" model me
 
 ---
 
-## 9. Credits
+## 9. Reliability & Observability Infrastructure
+
+This section documents the two lightweight services layered on top of the deployed stack to ensure the application stays responsive and measurable — both critical for a production-grade demonstration.
+
+---
+
+### 9.1 UptimeRobot — Backend Keep-Alive & Alerting
+
+#### The Problem: Render Free Tier Cold Starts
+
+The backend is hosted on **Render's free tier**. Render's free tier enforces a hard rule: any web service that receives **no inbound HTTP request for 15 consecutive minutes** is automatically spun down (put to sleep). The next incoming request then triggers a cold start, which takes **30–60 seconds** before the service becomes responsive again. For a live hackathon demo where a judge clicks "Assess Risk" and waits a full minute for a response, this is catastrophic.
+
+#### The Solution: UptimeRobot Ping Monitor
+
+**UptimeRobot** is a free uptime monitoring service configured to send an HTTP `GET` request to the backend's `/health` endpoint every **10 minutes**. Since this is shorter than Render's 15-minute inactivity window, the service is never allowed to sleep during active monitoring hours.
+
+```
+UptimeRobot Scheduler
+      │
+      │  HTTP GET /health  (every 10 minutes)
+      ▼
+Render Backend (https://gridlock-api.onrender.com/health)
+      │
+      │  200 OK  {"status": "ok"}
+      ▼
+UptimeRobot records uptime ✓
+```
+
+#### Configuration Summary
+
+| Parameter | Value |
+|---|---|
+| Monitor Type | HTTP(s) |
+| URL | `https://gridlock-api.onrender.com/health` |
+| Check Interval | Every **10 minutes** |
+| Alert Contact | **Anurag Kumar Verma** (email) |
+| Alert Trigger | Service down for ≥ 1 failed check |
+
+#### Alerting Behaviour
+
+If the `/health` endpoint fails to respond (HTTP non-2xx or timeout), UptimeRobot immediately sends a **downtime alert email to Anurag**. Once the service recovers, a **recovery confirmation email** is sent automatically. This ensures the team is notified within 10 minutes of any outage — no manual monitoring required.
+
+> **Why `/health` and not `/api/assess`?**  
+> The health endpoint is a zero-cost, instantaneous check — it returns a static JSON `{"status":"ok"}` without loading any ML model or running inference. This keeps the keep-alive ping as lightweight as possible, consuming negligible Render compute credits.
+
+---
+
+### 9.2 Umami Cloud — Privacy-First Analytics
+
+#### What Is Umami?
+
+**Umami** is an open-source, privacy-respecting web analytics platform. The production frontend is instrumented with **Umami Cloud (Free Tier)** to collect real-time visitor telemetry — without cookies, without GDPR consent banners, and without sharing data with third-party advertising networks.
+
+#### How It Works
+
+A single `<script>` tag is injected into the `<head>` of `index.html`:
+
+```html
+<script
+  defer
+  src="https://cloud.umami.is/script.js"
+  data-website-id="99e35ed8-82d6-484c-a468-44b7b074a851">
+</script>
+```
+
+- **`defer`** — The script loads after HTML parsing completes. It has zero impact on Time to First Byte (TTFB) or Largest Contentful Paint (LCP).
+- **`data-website-id`** — The unique identifier for the Corridor Watch property on the Umami Cloud dashboard.
+
+#### What Umami Tracks
+
+| Metric | Description |
+|---|---|
+| Page Views | Total and unique visits to the app |
+| Unique Visitors | Deduplicated by session fingerprint (no cookies) |
+| Referrer Sources | Where traffic originates (direct, GitHub, social) |
+| Device & Browser | Viewport size, OS, browser family |
+| Country | Approximate geography from IP (IP is never stored) |
+| Session Duration | How long visitors interact with the dashboard |
+
+#### What Umami Does NOT Track
+
+- ❌ No cookies are set
+- ❌ No personally identifiable information (PII) is collected
+- ❌ No cross-site tracking
+- ❌ No data sold to advertisers
+- ❌ No consent banner needed (fully GDPR / CCPA compliant by design)
+
+#### Free Tier Limits
+
+| Limit | Value |
+|---|---|
+| Websites | Up to 3 |
+| Monthly Events | 100,000 |
+| Data Retention | 6 months |
+| Team Members | 1 |
+
+For a hackathon product demonstration, these limits are entirely sufficient.
+
+---
+
+## 10. Credits
 
 ### Hackathon Team Members
 - Anurag Kumar Verma
