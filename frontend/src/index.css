@@ -6,14 +6,14 @@
    Reference: Bloomberg Intelligence, Palantir Light, GOV.UK
    ============================================================ */
 :root {
-  --bg:             #f1f4f8;
-  --bg-2:           #ffffff;
-  --surface:        #f8fafc;
-  --surface-2:      #eef2f7;
-  --card:           #ffffff;
-  --card-hover:     #f5f7fa;
-  --border:         #dde3ed;
-  --border-bright:  #c4cdd9;
+  --bg:             #f7f5f0;
+  --bg-2:           #fdfcfa;
+  --surface:        #faf8f4;
+  --surface-2:      #f0ece4;
+  --card:           #fdfcfa;
+  --card-hover:     #f5f2ec;
+  --border:         #e2ddd5;
+  --border-bright:  #c9c3b8;
 
   /* Primary — Amber (brand identity preserved) */
   --primary:        #c96a00;
