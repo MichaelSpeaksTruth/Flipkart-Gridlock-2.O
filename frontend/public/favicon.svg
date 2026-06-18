@@ -1,21 +1,43 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- Dark background -->
-  <rect width="32" height="32" rx="6" fill="#040608" />
-  
-  <!-- Street Light Pole -->
-  <path d="M10 26V12a6 6 0 0 1 6-6h6" fill="none" stroke="#4f6480" stroke-width="2.5" stroke-linecap="round" />
-  
-  <!-- Light Fixture / Lamp Head -->
-  <rect x="19" y="6" width="7" height="4" rx="1" fill="#d97706" />
-  
-  <!-- Light Beam / Cone of Light -->
-  <polygon points="19.5,10 13,24 29,24 22.5,10" fill="url(#lightBeam)" stroke="none" opacity="0.85" />
-  
-  <!-- Gradient for Light Beam -->
   <defs>
-    <linearGradient id="lightBeam" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.6" />
-      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.0" />
-    </linearGradient>
+    <!-- Glowing gradients for the three lights -->
+    <radialGradient id="redGlow" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#ff8787" />
+      <stop offset="40%" stop-color="#ef4444" />
+      <stop offset="100%" stop-color="#991b1b" />
+    </radialGradient>
+    <radialGradient id="yellowGlow" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#ffe066" />
+      <stop offset="40%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#9a3412" />
+    </radialGradient>
+    <radialGradient id="greenGlow" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#a7f3d0" />
+      <stop offset="40%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#065f46" />
+    </radialGradient>
+    <!-- Drop shadow for the housing to pop on any background -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1" flood-color="#000" flood-opacity="0.3" />
+    </filter>
   </defs>
+
+  <!-- Sleek dark grey/charcoal outer housing with shadow -->
+  <rect x="9" y="2" width="14" height="28" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1.5" filter="url(#shadow)" />
+  
+  <!-- Backboard details (horizontal lines separating the lights) -->
+  <line x1="9.5" y1="11.35" x2="22.5" y2="11.35" stroke="#334155" stroke-width="1" />
+  <line x1="9.5" y1="20.65" x2="22.5" y2="20.65" stroke="#334155" stroke-width="1" />
+
+  <!-- Red Light (Top) -->
+  <circle cx="16" cy="6.7" r="3.2" fill="url(#redGlow)" stroke="#ef4444" stroke-width="0.5" />
+  <circle cx="14.8" cy="5.5" r="0.8" fill="#ffffff" opacity="0.65" />
+
+  <!-- Yellow Light (Middle) -->
+  <circle cx="16" cy="16" r="3.2" fill="url(#yellowGlow)" stroke="#f59e0b" stroke-width="0.5" />
+  <circle cx="14.8" cy="14.8" r="0.8" fill="#ffffff" opacity="0.65" />
+
+  <!-- Green Light (Bottom) -->
+  <circle cx="16" cy="25.3" r="3.2" fill="url(#greenGlow)" stroke="#10b981" stroke-width="0.5" />
+  <circle cx="14.8" cy="24.1" r="0.8" fill="#ffffff" opacity="0.65" />
 </svg>
