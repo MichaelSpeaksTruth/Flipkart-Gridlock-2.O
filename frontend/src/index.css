@@ -84,7 +84,7 @@ body::before {
    ============================================================ */
 .app {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr;
   height: 100%;
   min-height: 100vh;
 }
@@ -286,6 +286,12 @@ body::before {
   flex-direction: column;
   gap: 0.875rem;
   flex: 1;
+}
+
+/* Intake panel body — always scrolls to bottom as form grows */
+.intake-scroll-body {
+  overflow-y: auto;
+  scroll-behavior: smooth;
 }
 
 /* ============================================================
@@ -864,27 +870,55 @@ option { background: var(--surface-2); color: var(--txt); }
 }
 
 /* ============================================================
-   STATUS BAR — FOOTER
+   SCROLL PANEL — overflow-detecting wrapper with arrow hint
    ============================================================ */
-.statusbar {
+.scroll-panel-wrapper {
+  position: relative;
+  flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2rem;
-  height: 28px;
-  background: var(--bg-2);
-  border-top: 1px solid var(--border);
-  font-size: 0.6rem;
-  color: var(--txt-3);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
 }
 
-.statusbar-left,
-.statusbar-right {
+.scroll-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  /* thin styled scrollbar */
+}
+.scroll-panel-body::-webkit-scrollbar { width: 3px; }
+.scroll-panel-body::-webkit-scrollbar-track { background: transparent; }
+.scroll-panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Blinking down-arrow circle — only rendered when content overflows */
+.scroll-arrow-indicator {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  justify-content: center;
+  pointer-events: none;
+  animation: scroll-arrow-blink 1.4s ease-in-out infinite;
+  z-index: 20;
+}
+
+.scroll-arrow-indicator svg {
+  width: 16px;
+  height: 16px;
+  stroke: rgba(255,255,255,0.9);
+}
+
+@keyframes scroll-arrow-blink {
+  0%,  100% { opacity: 1;   transform: translateX(-50%) translateY(0); }
+  50%        { opacity: 0.35; transform: translateX(-50%) translateY(3px); }
 }
 
 /* ============================================================

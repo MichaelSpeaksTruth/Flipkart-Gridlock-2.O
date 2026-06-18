@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Gauge } from './components/Gauge';
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
@@ -104,6 +104,52 @@ function SegCtrl({ options, value, onChange }: { options: string[]; value: strin
 /* ─── Tag ────────────────────────────────────────────────────────────────── */
 function Tag({ children, variant }: { children: React.ReactNode; variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'amber' }) {
   return <span className={`tag tag-${variant}`}>{children}</span>;
+}
+
+/* ─── ScrollPanel ────────────────────────────────────────────────────────── */
+// Wraps a scrollable panel body; shows a blinking down-arrow circle only when
+// there is hidden content below the visible area.
+function ScrollPanel({ children, className }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [showArrow, setShowArrow] = useState(false);
+
+  const checkOverflow = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const hasMore = el.scrollHeight - el.scrollTop - el.clientHeight > 8;
+    setShowArrow(hasMore);
+  }, []);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    checkOverflow();
+    el.addEventListener('scroll', checkOverflow);
+    const ro = new ResizeObserver(checkOverflow);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', checkOverflow);
+      ro.disconnect();
+    };
+  }, [checkOverflow]);
+
+  // Re-check whenever children change (new result loaded)
+  useEffect(() => { checkOverflow(); });
+
+  return (
+    <div className={`scroll-panel-wrapper${className ? ' ' + className : ''}`}>
+      <div className="scroll-panel-body" ref={ref}>
+        {children}
+      </div>
+      {showArrow && (
+        <div className="scroll-arrow-indicator">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ─── Metric Tile ────────────────────────────────────────────────────────── */
@@ -319,7 +365,7 @@ export default function App() {
           <div className="topbar-divider" />
           <div className="status-row">
             <div className="status-dot" />
-            <div className="status-text">Systems Nominal</div>
+            <div className="status-text">Online</div>
           </div>
         </div>
       </header>
@@ -333,7 +379,7 @@ export default function App() {
             <span className="panel-header-label">Incident Intake Panel</span>
             <span className="panel-badge">INTAKE</span>
           </div>
-          <div className="panel-body">
+          <div className="panel-body intake-scroll-body">
 
             {/* Event Case */}
             <div className="field">
@@ -465,7 +511,7 @@ export default function App() {
         </div>
 
         {/* ═══ CENTRE PANEL — RISK ASSESSMENT ══════════════════════════ */}
-        <div className="panel panel-risk">
+        <div className="panel panel-risk" style={{ overflow: 'hidden' }}>
           <div className="panel-header">
             <span className="panel-header-label">Risk Assessment</span>
             {result && (
@@ -479,153 +525,144 @@ export default function App() {
             )}
           </div>
 
-          {result ? (
-            <>
-              <Gauge value={result.risk_probability} />
+          <ScrollPanel>
+            {result ? (
+              <>
+                <Gauge value={result.risk_probability} />
 
-              {/* Metric grid */}
-              <div className="metric-grid">
-                <MetricTile
-                  label="ETA to Clear"
-                  value={`~${result.eta_minutes}`}
-                  sub="minutes (historical median)"
-                  color="var(--txt)"
-                />
-                <MetricTile
-                  label="Fragility Score"
-                  value={`${result.fragility_score.toFixed(1)}`}
-                  sub="out of 10"
-                  color={fragColor(result.fragility_score)}
-                />
-              </div>
+                {/* Metric grid */}
+                <div className="metric-grid">
+                  <MetricTile
+                    label="ETA to Clear"
+                    value={`~${result.eta_minutes}`}
+                    sub="minutes (historical median)"
+                    color="var(--txt)"
+                  />
+                  <MetricTile
+                    label="Fragility Score"
+                    value={`${result.fragility_score.toFixed(1)}`}
+                    sub="out of 10"
+                    color={fragColor(result.fragility_score)}
+                  />
+                </div>
 
-              {/* Context tags */}
-              <div className="tag-row">
-                <Tag variant={isPeak() ? 'warning' : 'neutral'}>
-                  {isPeak() ? '● Peak Hours' : '○ Off-Peak'}
-                </Tag>
-                <Tag variant="neutral">
-                  {isWeekend() ? 'Weekend' : 'Weekday'}
-                </Tag>
-                <Tag variant={authenticated ? 'success' : 'danger'}>
-                  {authenticated ? '✓ Authenticated' : '! Unverified'}
-                </Tag>
-                <Tag variant="info">
-                  {eventType}
-                </Tag>
-              </div>
+                {/* Context tags */}
+                <div className="tag-row">
+                  <Tag variant={isPeak() ? 'warning' : 'neutral'}>
+                    {isPeak() ? '● Peak Hours' : '○ Off-Peak'}
+                  </Tag>
+                  <Tag variant="neutral">
+                    {isWeekend() ? 'Weekend' : 'Weekday'}
+                  </Tag>
+                  <Tag variant={authenticated ? 'success' : 'danger'}>
+                    {authenticated ? '✓ Authenticated' : '! Unverified'}
+                  </Tag>
+                  <Tag variant="info">
+                    {eventType}
+                  </Tag>
+                </div>
 
-              {/* Corridor metadata */}
-              <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div className="rec-line">
-                  <span className="rec-line-key">Corridor</span>
-                  <span className="rec-line-val">{corridor}</span>
+                {/* Corridor metadata */}
+                <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div className="rec-line">
+                    <span className="rec-line-key">Corridor</span>
+                    <span className="rec-line-val">{corridor}</span>
+                  </div>
+                  <div className="rec-line">
+                    <span className="rec-line-key">Cause</span>
+                    <span className="rec-line-val">{eventCase}</span>
+                  </div>
+                  <div className="rec-line">
+                    <span className="rec-line-key">Risk %</span>
+                    <span className="rec-line-val" style={{ color: riskColor(result.risk_label) }}>
+                      {result.risk_probability.toFixed(1)}%
+                    </span>
+                  </div>
                 </div>
-                <div className="rec-line">
-                  <span className="rec-line-key">Cause</span>
-                  <span className="rec-line-val">{eventCase}</span>
-                </div>
-                <div className="rec-line">
-                  <span className="rec-line-key">Risk %</span>
-                  <span className="rec-line-val" style={{ color: riskColor(result.risk_label) }}>
-                    {result.risk_probability.toFixed(1)}%
-                  </span>
+              </>
+            ) : (
+              <div className="empty-state">
+                <svg className="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d={ICONS.target} />
+                </svg>
+                <div className="empty-text">
+                  Configure the incident parameters<br />and click <strong style={{ color: 'var(--txt)' }}>Assess Risk</strong> to begin.
                 </div>
               </div>
-            </>
-          ) : (
-            <div className="empty-state">
-              <svg className="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d={ICONS.target} />
-              </svg>
-              <div className="empty-text">
-                Configure the incident parameters<br />and click <strong style={{ color: 'var(--txt)' }}>Assess Risk</strong> to begin.
-              </div>
-            </div>
-          )}
+            )}
+          </ScrollPanel>
         </div>
 
         {/* ═══ RIGHT PANEL — OPERATIONAL INTELLIGENCE ══════════════════ */}
-        <div className="panel">
+        <div className="panel" style={{ overflow: 'hidden' }}>
           <div className="panel-header">
             <span className="panel-header-label">Operational Intelligence</span>
             <span className="panel-badge">INTEL</span>
           </div>
 
-          {result ? (
-            <>
-              {/* Recommendation block */}
-              <IntelBlock icon="zap" title="Operational Recommendation">
-                <div className="action-card">
-                  <Icon d={ICONS.alert} size={15} />
-                  <span style={{ fontSize: '0.82rem', lineHeight: 1.7 }}>{result.recommendation}</span>
-                </div>
-              </IntelBlock>
-
-              {/* Quick stats */}
-              <IntelBlock icon="grid" title="Risk Breakdown">
-                <div className="rec-line">
-                  <span className="rec-line-key">Closure Risk</span>
-                  <span className="rec-line-val" style={{ color: riskColor(result.risk_label) }}>
-                    {result.risk_probability.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="rec-line">
-                  <span className="rec-line-key">ETA</span>
-                  <span className="rec-line-val">~{result.eta_minutes} minutes</span>
-                </div>
-                <div className="rec-line">
-                  <span className="rec-line-key">Fragility</span>
-                  <span className="rec-line-val" style={{ color: fragColor(result.fragility_score) }}>
-                    {result.fragility_score.toFixed(1)} / 10
-                  </span>
-                </div>
-              </IntelBlock>
-
-              {/* Diversion */}
-              <IntelBlock icon="nav" title="Diversion Intelligence">
-                {result.diversion && result.diversion !== 'None available' ? (
-                  <div className="diversion-chip">
-                    <Icon d={ICONS.nav} size={13} />
-                    {result.diversion}
+          <ScrollPanel>
+            {result ? (
+              <>
+                {/* Recommendation block */}
+                <IntelBlock icon="zap" title="Operational Recommendation">
+                  <div className="action-card">
+                    <Icon d={ICONS.alert} size={15} />
+                    <span style={{ fontSize: '0.82rem', lineHeight: 1.7 }}>{result.recommendation}</span>
                   </div>
-                ) : (
-                  <span style={{ color: 'var(--warning)', fontSize: '0.78rem' }}>
-                    No lower-fragility corridor available in zone.
-                  </span>
-                )}
-              </IntelBlock>
+                </IntelBlock>
 
-              {/* Summary */}
-              <IntelBlock icon="shield" title="Operational Summary">
-                <p className="summary-block">{result.summary}</p>
-              </IntelBlock>
-            </>
-          ) : (
-            <div className="empty-state">
-              <svg className="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d={ICONS.shield} />
-              </svg>
-              <div className="empty-text">
-                Operational intelligence will appear<br />after risk assessment.
+                {/* Quick stats */}
+                <IntelBlock icon="grid" title="Risk Breakdown">
+                  <div className="rec-line">
+                    <span className="rec-line-key">Closure Risk</span>
+                    <span className="rec-line-val" style={{ color: riskColor(result.risk_label) }}>
+                      {result.risk_probability.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="rec-line">
+                    <span className="rec-line-key">ETA</span>
+                    <span className="rec-line-val">~{result.eta_minutes} minutes</span>
+                  </div>
+                  <div className="rec-line">
+                    <span className="rec-line-key">Fragility</span>
+                    <span className="rec-line-val" style={{ color: fragColor(result.fragility_score) }}>
+                      {result.fragility_score.toFixed(1)} / 10
+                    </span>
+                  </div>
+                </IntelBlock>
+
+                {/* Diversion */}
+                <IntelBlock icon="nav" title="Diversion Intelligence">
+                  {result.diversion && result.diversion !== 'None available' ? (
+                    <div className="diversion-chip">
+                      <Icon d={ICONS.nav} size={13} />
+                      {result.diversion}
+                    </div>
+                  ) : (
+                    <span style={{ color: 'var(--warning)', fontSize: '0.78rem' }}>
+                      No lower-fragility corridor available in zone.
+                    </span>
+                  )}
+                </IntelBlock>
+
+                {/* Summary */}
+                <IntelBlock icon="shield" title="Operational Summary">
+                  <p className="summary-block">{result.summary}</p>
+                </IntelBlock>
+              </>
+            ) : (
+              <div className="empty-state">
+                <svg className="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d={ICONS.shield} />
+                </svg>
+                <div className="empty-text">
+                  Operational intelligence will appear<br />after risk assessment.
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </ScrollPanel>
         </div>
       </main>
-
-      {/* ── STATUS BAR ─────────────────────────────────────────────────── */}
-      <footer className="statusbar">
-        <div className="statusbar-left">
-          <div className="statusbar-item">CORRIDOR WATCH v2.0</div>
-          <div className="statusbar-item">GRIDLOCK HACKATHON 2.0</div>
-          <div className="statusbar-item">LightGBM · 5-fold OOF AUC 0.8057</div>
-        </div>
-        <div className="statusbar-right">
-          <div className="statusbar-item">8,173 EVENTS · 14 NAMED CORRIDORS</div>
-          <div className="statusbar-item" style={{ color: 'var(--success)' }}>◉ ONLINE</div>
-        </div>
-      </footer>
     </div>
   );
 }
