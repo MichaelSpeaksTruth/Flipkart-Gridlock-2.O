@@ -419,6 +419,13 @@ body::before {
   background: linear-gradient(135deg, var(--primary-dim), var(--primary));
   opacity: 0;
   transition: opacity 0.22s;
+  z-index: 0;
+}
+
+.btn-new-risk > svg,
+.btn-new-risk > span {
+  position: relative;
+  z-index: 1;
 }
 
 .btn-new-risk:hover::before { opacity: 1; }
