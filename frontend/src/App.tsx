@@ -273,6 +273,7 @@ export default function App() {
   const [stageIdx, setStageIdx]   = useState(0);
   const [result, setResult]       = useState<AssessResult | null>(null);
   const [formError, setFormError] = useState('');
+  const [frozen, setFrozen]       = useState(false); // locks panel after result
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -337,12 +338,29 @@ export default function App() {
         }),
       });
       if (!res.ok) throw new Error('API Error');
-      setResult(await res.json());
+      const data = await res.json();
+      setResult(data);
+      setFrozen(true);
     } catch (e) {
       console.error(e);
     } finally {
       setAssessing(false);
     }
+  };
+
+  // Full soft-reset — no page reload
+  const handleReset = () => {
+    setEventCase('');
+    setCorridor('');
+    setOverrideMode('Auto');
+    setPoliceStation('');
+    setDate(todayStr);
+    setTime(new Date().toTimeString().substring(0, 5));
+    setEventType('Unplanned');
+    setAuthenticated(true);
+    setResult(null);
+    setFormError('');
+    setFrozen(false);
   };
 
   const isPeak = () => {
@@ -429,146 +447,214 @@ export default function App() {
         <div className="panel panel-intake">
           <div className="panel-header">
             <span className="panel-header-label">Incident Intake Panel</span>
-            <span className="panel-badge">INTAKE</span>
+            <span className="panel-badge" style={frozen ? { background:'var(--success-glow)', color:'var(--success)', borderColor:'rgba(34,197,94,0.28)' } : {}}>
+              {frozen ? 'LOCKED' : 'INTAKE'}
+            </span>
           </div>
 
-          {/* ── Scrollable fields area ────────────────────────────── */}
-          <div className="intake-fields" ref={intakeBodyRef}>
+          {frozen ? (
+            /* ── FROZEN VIEW: summary of what was submitted ─────── */
+            <>
+              <div className="intake-summary">
+                <div className="intake-summary-badge">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  Session Locked · Assessment Complete
+                </div>
 
-            {/* Event Case */}
-            <div className="field">
-              <label className="field-label">Event Case</label>
-              <select
-                className={`field-control${!eventCase ? ' placeholder' : ''}`}
-                value={eventCase}
-                onChange={e => { setEventCase(e.target.value); setFormError(''); }}
-              >
-                <option value="" disabled>— Select Event Case —</option>
-                {meta?.event_cases.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
+                <div className="intake-summary-rows">
+                  <div className="summary-row">
+                    <span className="summary-key">Event Case</span>
+                    <span className="summary-val">{eventCase}</span>
+                  </div>
+                  <div className="summary-row">
+                    <span className="summary-key">Corridor</span>
+                    <span className="summary-val">{corridor}</span>
+                  </div>
+                  <div className="summary-row">
+                    <span className="summary-key">Police Station</span>
+                    <span className="summary-val">
+                      {overrideMode === 'Manual' && policeStation
+                        ? policeStation
+                        : (meta?.corridor_police?.[corridor] || 'Auto-resolved')}
+                    </span>
+                  </div>
+                  <div className="summary-row">
+                    <span className="summary-key">Date / Time</span>
+                    <span className="summary-val">{date} &nbsp;{time}</span>
+                  </div>
+                  <div className="summary-row">
+                    <span className="summary-key">Event Type</span>
+                    <span className="summary-val">{eventType}</span>
+                  </div>
+                  <div className="summary-row">
+                    <span className="summary-key">Auth</span>
+                    <span className="summary-val" style={{ color: authenticated ? 'var(--success)' : 'var(--danger)' }}>
+                      {authenticated ? '✓ Verified' : '× Unverified'}
+                    </span>
+                  </div>
+                  {result && (
+                    <div className="summary-row" style={{ marginTop: '0.25rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)' }}>
+                      <span className="summary-key">Risk</span>
+                      <span className="summary-val" style={{ color: riskColor(result.risk_label), fontWeight: 700 }}>
+                        {result.risk_label.toUpperCase()} · {result.risk_probability.toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-            {/* Corridor */}
-            <div className="field" ref={refCorridor}>
-              <label className="field-label">Corridor</label>
-              <select
-                className={`field-control${!corridor ? ' placeholder' : ''}`}
-                value={corridor}
-                onChange={e => { setCorridor(e.target.value); setFormError(''); }}
-              >
-                <option value="" disabled>— Select Corridor —</option>
-                {meta?.corridors.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-              {corridor && meta && (
-                <RevealOnMount>
-                  <GpsInfoBar corridor={corridor} meta={meta} />
-                </RevealOnMount>
-              )}
-            </div>
+              <div className="intake-footer">
+                <button className="btn-new-risk" onClick={handleReset}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1 4 1 10 7 10" />
+                    <path d="M3.51 15a9 9 0 1 0 .49-4.5" />
+                  </svg>
+                  Assess New Risk
+                </button>
+              </div>
+            </>
+          ) : (
+            /* ── NORMAL VIEW: editable form ──────────────────── */
+            <>
+              <div className="intake-fields" ref={intakeBodyRef}>
 
-            <div className="field-sep" />
-
-            {/* Police Station Override */}
-            <div className="field" ref={refOverride}>
-              <label className="field-label">Override Police Station</label>
-              <SegCtrl options={['Auto', 'Manual']} value={overrideMode} onChange={setOverrideMode} />
-              {overrideMode === 'Auto' && corridor && meta && (
-                <RevealOnMount>
-                  <AutoInfoBar corridor={corridor} meta={meta} />
-                </RevealOnMount>
-              )}
-            </div>
-
-            {overrideMode === 'Manual' && (
-              <RevealOnMount>
-                <div className="field" ref={refManualPS}>
-                  <label className="field-label">Police Station</label>
+                {/* Event Case */}
+                <div className="field">
+                  <label className="field-label">Event Case</label>
                   <select
-                    className={`field-control${!policeStation ? ' placeholder' : ''}`}
-                    value={policeStation}
-                    onChange={e => setPoliceStation(e.target.value)}
+                    className={`field-control${!eventCase ? ' placeholder' : ''}`}
+                    value={eventCase}
+                    onChange={e => { setEventCase(e.target.value); setFormError(''); }}
                   >
-                    <option value="" disabled>— Select Police Station —</option>
-                    {meta?.police_stations.map(ps => (
-                      <option key={ps} value={ps}>{ps}</option>
+                    <option value="" disabled>— Select Event Case —</option>
+                    {meta?.event_cases.map(c => (
+                      <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
                 </div>
-              </RevealOnMount>
-            )}
 
-            <div className="field-sep" />
+                {/* Corridor */}
+                <div className="field" ref={refCorridor}>
+                  <label className="field-label">Corridor</label>
+                  <select
+                    className={`field-control${!corridor ? ' placeholder' : ''}`}
+                    value={corridor}
+                    onChange={e => { setCorridor(e.target.value); setFormError(''); }}
+                  >
+                    <option value="" disabled>— Select Corridor —</option>
+                    {meta?.corridors.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  {corridor && meta && (
+                    <RevealOnMount>
+                      <GpsInfoBar corridor={corridor} meta={meta} />
+                    </RevealOnMount>
+                  )}
+                </div>
 
-            {/* Date & Time */}
-            <div className="field-row" ref={refDateTime}>
-              <div className="field">
-                <label className="field-label">Date</label>
-                <input
-                  type="date"
-                  className="field-control"
-                  value={date}
-                  onChange={e => setDate(e.target.value)}
-                  min={todayStr}
+                <div className="field-sep" />
+
+                {/* Police Station */}
+                <div className="field" ref={refOverride}>
+                  <label className="field-label">Police Station</label>
+                  <SegCtrl options={['Auto', 'Manual']} value={overrideMode} onChange={setOverrideMode} />
+                  {overrideMode === 'Auto' && corridor && meta && (
+                    <RevealOnMount>
+                      <AutoInfoBar corridor={corridor} meta={meta} />
+                    </RevealOnMount>
+                  )}
+                </div>
+
+                {overrideMode === 'Manual' && (
+                  <RevealOnMount>
+                    <div className="field" ref={refManualPS}>
+                      <label className="field-label">Select Station</label>
+                      <select
+                        className={`field-control${!policeStation ? ' placeholder' : ''}`}
+                        value={policeStation}
+                        onChange={e => setPoliceStation(e.target.value)}
+                      >
+                        <option value="" disabled>— Select Police Station —</option>
+                        {meta?.police_stations.map(ps => (
+                          <option key={ps} value={ps}>{ps}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </RevealOnMount>
+                )}
+
+                <div className="field-sep" />
+
+                {/* Date & Time */}
+                <div className="field-row" ref={refDateTime}>
+                  <div className="field">
+                    <label className="field-label">Date</label>
+                    <input
+                      type="date"
+                      className="field-control"
+                      value={date}
+                      onChange={e => setDate(e.target.value)}
+                      min={todayStr}
+                    />
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Time (24h)</label>
+                    <input
+                      type="time"
+                      className="field-control"
+                      value={time}
+                      onChange={e => setTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Event Type */}
+                <div className="field" ref={refEventType}>
+                  <label className="field-label">Event Type</label>
+                  <SegCtrl options={['Planned', 'Unplanned']} value={eventType} onChange={setEventType} />
+                </div>
+
+                {/* Validation error */}
+                {formError && (
+                  <div className="form-error">
+                    <Icon d={ICONS.alert} size={12} />
+                    {formError}
+                  </div>
+                )}
+
+                <div style={{ height: '0.5rem' }} />
+              </div>
+
+              <div className="intake-footer">
+                <Toggle
+                  checked={authenticated}
+                  onChange={setAuthenticated}
+                  label="Authenticate Report"
                 />
+                <button
+                  className={`btn-assess${assessing ? ' loading' : ''}`}
+                  onClick={handleAssess}
+                  disabled={assessing}
+                >
+                  {assessing ? (
+                    <>
+                      <div className="spinner dark" />
+                      {STAGES[stageIdx]}
+                    </>
+                  ) : (
+                    <>
+                      <Icon d={ICONS.target} size={15} />
+                      Assess Risk
+                    </>
+                  )}
+                </button>
               </div>
-              <div className="field">
-                <label className="field-label">Time (24h)</label>
-                <input
-                  type="time"
-                  className="field-control"
-                  value={time}
-                  onChange={e => setTime(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Event Type */}
-            <div className="field" ref={refEventType}>
-              <label className="field-label">Event Type</label>
-              <SegCtrl options={['Planned', 'Unplanned']} value={eventType} onChange={setEventType} />
-            </div>
-
-            {/* Validation error */}
-            {formError && (
-              <div className="form-error">
-                <Icon d={ICONS.alert} size={12} />
-                {formError}
-              </div>
-            )}
-
-            {/* Spacer so last field isn't glued to the footer */}
-            <div style={{ height: '0.5rem' }} />
-          </div>
-
-          {/* ── Sticky footer: separator + toggle + button ────────── */}
-          <div className="intake-footer">
-            <Toggle
-              checked={authenticated}
-              onChange={setAuthenticated}
-              label="Authenticate Report"
-            />
-            <button
-              className={`btn-assess${assessing ? ' loading' : ''}`}
-              onClick={handleAssess}
-              disabled={assessing}
-            >
-              {assessing ? (
-                <>
-                  <div className="spinner dark" />
-                  {STAGES[stageIdx]}
-                </>
-              ) : (
-                <>
-                  <Icon d={ICONS.target} size={15} />
-                  Assess Risk
-                </>
-              )}
-            </button>
-          </div>
+            </>
+          )}
         </div>
 
         {/* ═══ CENTRE PANEL — RISK ASSESSMENT ══════════════════════════ */}
